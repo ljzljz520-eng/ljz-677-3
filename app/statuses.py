@@ -1,0 +1,35 @@
+"""任务与数据行状态常量。"""
+
+# 行状态
+PENDING = "PENDING"            # 待上送
+SUCCESS = "SUCCESS"            # 上送成功
+PLATFORM_ERROR = "PLATFORM_ERROR"  # 平台返回异常
+INVALID = "INVALID"            # 本地校验失败
+DUPLICATE = "DUPLICATE"        # 重复数据
+
+ROW_STATUS = {
+    PENDING: "待上送",
+    SUCCESS: "上送成功",
+    PLATFORM_ERROR: "平台异常",
+    INVALID: "校验失败",
+    DUPLICATE: "重复数据",
+}
+
+# 任务状态
+TASK_PARSING = "PARSING"
+TASK_UPLOADING = "UPLOADING"
+TASK_COMPLETED = "COMPLETED"
+TASK_COMPLETED_WITH_ERRORS = "COMPLETED_WITH_ERRORS"
+TASK_CANCELLED = "CANCELLED"
+TASK_FAILED = "FAILED"
+
+TASK_STATUS = {
+    TASK_PARSING: "校验中",
+    TASK_UPLOADING: "上送中",
+    TASK_COMPLETED: "已完成",
+    TASK_COMPLETED_WITH_ERRORS: "完成（含异常）",
+    TASK_CANCELLED: "已取消",
+    TASK_FAILED: "任务失败",
+}
+
+ACTIVE_TASK_STATUS = {TASK_PARSING, TASK_UPLOADING}
