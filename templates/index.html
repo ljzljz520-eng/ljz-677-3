@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体检结果批量上传</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+         background:#f0f2f5; color:#1f2329; min-height:100vh; }
+  .container { max-width:1080px; margin:0 auto; padding:24px 16px 60px; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+  header .logo { width:40px; height:40px; border-radius:10px; background:#1677ff;
+                 color:#fff; display:flex; align-items:center; justify-content:center;
+                 font-size:20px; font-weight:700; }
+  header h1 { font-size:20px; }
+  header p { font-size:12px; color:#8a8f99; margin-top:2px; }
+  .card { background:#fff; border-radius:10px; padding:20px; margin-bottom:16px;
+          box-shadow:0 1px 3px rgba(0,0,0,.06); }
+  .card h2 { font-size:15px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .card h2::before { content:""; width:4px; height:14px; background:#1677ff; border-radius:2px; }
+
+  /* 上传区 */
+  .drop { border:2px dashed #c9cdd4; border-radius:10px; padding:30px; text-align:center;
+          cursor:pointer; transition:.2s; }
+  .drop:hover, .drop.over { border-color:#1677ff; background:#f0f7ff; }
+  .drop .icon { font-size:34px; margin-bottom:8px; }
+  .drop p { color:#8a8f99; font-size:13px; }
+  .drop .fn { color:#1677ff; font-weight:600; }
+  .upload-actions { display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap; }
+  .hint { font-size:12px; color:#8a8f99; line-height:1.8; margin-top:12px;
+          background:#f7f8fa; border-radius:8px; padding:10px 14px; }
+  .hint b { color:#4e5560; }
+  .hint code { background:#eceef1; padding:1px 6px; border-radius:4px; font-size:11px; }
+
+  .btn { border:none; border-radius:6px; padding:8px 16px; font-size:13px; cursor:pointer;
+         transition:.15s; }
+  .btn-primary { background:#1677ff; color:#fff; }
+  .btn-primary:hover { background:#4096ff; }
+  .btn-primary:disabled { background:#a8c7fa; cursor:not-allowed; }
+  .btn-ghost { background:#fff; border:1px solid #d9dce1; color:#4e5560; }
+  .btn-ghost:hover { border-color:#1677ff; color:#1677ff; }
+  .btn-sm { padding:4px 10px; font-size:12px; }
+
+  /* 任务列表 */
+  .task { border:1px solid #eceef1; border-radius:10px; padding:14px 16px; margin-bottom:10px; }
+  .task-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .task-name { font-weight:600; font-size:14px; max-width:320px; overflow:hidden;
+               text-overflow:ellipsis; white-space:nowrap; }
+  .task-time { color:#8a8f99; font-size:12px; }
+  .task-ops { margin-left:auto; display:flex; gap:8px; }
+  .progress { height:8px; background:#f0f1f3; border-radius:4px; margin:10px 0 8px; overflow:hidden; }
+  .progress > div { height:100%; background:#1677ff; border-radius:4px; transition:width .4s; }
+  .progress.done > div { background:#22c55e; }
+  .progress.err > div { background:#f5222d; }
+  .stats { display:flex; gap:14px; font-size:12px; color:#4e5560; flex-wrap:wrap; }
+  .badge { display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:10px;
+           font-size:12px; }
+  .b-ok { background:#e8f7ee; color:#14954f; }
+  .b-err { background:#fdecec; color:#d4380d; }
+  .b-dup { background:#fff4e5; color:#d4760a; }
+  .b-run { background:#e8f1ff; color:#1677ff; }
+  .b-grey { background:#f0f1f3; color:#8a8f99; }
+  .task-msg { color:#d4380d; font-size:12px; margin-top:6px; }
+  .empty { text-align:center; color:#a0a4ab; padding:30px 0; font-size:13px; }
+
+  /* 明细 */
+  #detail { display:none; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+  .tab { padding:5px 14px; border-radius:16px; font-size:12px; cursor:pointer;
+         background:#f0f1f3; color:#4e5560; border:1px solid transparent; }
+  .tab.active { background:#e8f1ff; color:#1677ff; border-color:#1677ff; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { padding:8px 10px; text-align:left; border-bottom:1px solid #f0f1f3;
+           white-space:nowrap; }
+  th { background:#f7f8fa; color:#4e5560; font-weight:600; position:sticky; top:0; }
+  td.msg { white-space:normal; max-width:280px; color:#d4380d; }
+  tr.dup td.msg { color:#d4760a; }
+  .table-wrap { max-height:420px; overflow:auto; border:1px solid #f0f1f3; border-radius:8px; }
+  .pager { display:flex; align-items:center; gap:10px; margin-top:10px; font-size:12px;
+           color:#4e5560; justify-content:flex-end; }
+  .st { padding:2px 8px; border-radius:10px; font-size:11px; }
+
+  #toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); z-index:99;
+           display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .toast { padding:10px 20px; border-radius:8px; color:#fff; font-size:13px;
+           box-shadow:0 4px 12px rgba(0,0,0,.15); animation:fade .3s; }
+  .toast.ok { background:#22c55e; } .toast.err { background:#f5222d; }
+  @keyframes fade { from { opacity:0; transform:translateY(-8px);} to { opacity:1; } }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div class="container">
+  <header>
+    <div class="logo">检</div>
+    <div>
+      <h1>体检结果批量上传</h1>
+      <p>导入 Excel → 校验 → 上送健康平台，异常按行展示与导出</p>
+    </div>
+  </header>
+
+  <!-- 上传 -->
+  <div class="card">
+    <h2>导入 Excel</h2>
+    <div class="drop" id="drop">
+      <div class="icon">📄</div>
+      <p>点击选择或拖拽 <b>.xlsx</b> 文件到此处</p>
+      <p class="fn" id="fname"></p>
+      <input type="file" id="file" accept=".xlsx,.xlsm" hidden>
+    </div>
+    <div class="upload-actions">
+      <button class="btn btn-primary" id="btnUpload" disabled>开始上传</button>
+      <a class="btn btn-ghost" href="/api/template">下载导入模板</a>
+    </div>
+    <div class="hint">
+      <b>列要求：</b>人员编号、项目、结果、单位（选填）、体检日期（如 2026-09-20，支持 Excel 日期格式）。<br>
+      <b>校验规则：</b>人员编号 4-32 位字母/数字/横线；结果、项目、体检日期必填；日期不能晚于今天。<br>
+      <b>重复识别：</b>「人员编号 + 项目 + 体检日期」相同即判重（含文件内重复与历史已上传记录），重复行不再上送。<br>
+      <b>平台项目目录：</b>{% for it in platform_items %}<code>{{ it }}</code>{% endfor %}
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="card">
+    <h2>上传任务</h2>
+    <div id="tasks"><div class="empty">暂无任务，请先上传文件</div></div>
+  </div>
+
+  <!-- 行明细 -->
+  <div class="card" id="detail">
+    <h2>行明细 <span id="detailName" style="color:#8a8f99;font-weight:400;font-size:12px"></span></h2>
+    <div class="tabs" id="tabs"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>行号</th><th>人员编号</th><th>项目</th><th>结果</th><th>单位</th>
+          <th>体检日期</th><th>状态</th><th>说明</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn btn-ghost btn-sm" id="prev">上一页</button>
+      <span id="pageInfo"></span>
+      <button class="btn btn-ghost btn-sm" id="next">下一页</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let file = null, currentTask = null, filter = 'all', page = 1, pageTotal = 0;
+
+function toast(msg, ok=true){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (ok ? 'ok' : 'err');
+  el.textContent = msg;
+  $('#toast').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+const esc = s => String(s ?? '').replace(/[&<>"']/g,
+  c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 上传 ---------- */
+const drop = $('#drop'), input = $('#file');
+drop.onclick = () => input.click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over');
+  if (e.dataTransfer.files[0]) pick(e.dataTransfer.files[0]); };
+input.onchange = () => input.files[0] && pick(input.files[0]);
+function pick(f){
+  if (!/\.xls[xm]$/i.test(f.name)) { toast('仅支持 .xlsx 文件', false); return; }
+  file = f;
+  $('#fname').textContent = '已选择：' + f.name;
+  $('#btnUpload').disabled = false;
+}
+$('#btnUpload').onclick = async () => {
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  $('#btnUpload').disabled = true;
+  try {
+    const r = await fetch('/api/upload', { method:'POST', body:fd });
+    const j = await r.json();
+    if (!r.ok) { toast(j.error || '上传失败', false); $('#btnUpload').disabled = false; return; }
+    toast('已创建任务，开始处理');
+    file = null; input.value = ''; $('#fname').textContent = '';
+    refreshTasks();
+  } catch(e) { toast('上传失败：' + e.message, false); $('#btnUpload').disabled = false; }
+};
+
+/* ---------- 任务列表 ---------- */
+const ST_TEXT = { pending:'等待中', processing:'处理中', finished:'已完成', failed:'失败' };
+async function refreshTasks(){
+  const list = await (await fetch('/api/tasks')).json();
+  const box = $('#tasks');
+  if (!list.length) { box.innerHTML = '<div class="empty">暂无任务，请先上传文件</div>'; return; }
+  box.innerHTML = list.map(t => {
+    const pct = t.total ? Math.round(t.processed / t.total * 100) : 0;
+    const running = t.status === 'processing' || t.status === 'pending';
+    const cls = t.status === 'failed' ? 'err' : (running ? '' : 'done');
+    const stBadge = running ? `<span class="badge b-run">${ST_TEXT[t.status]} ${pct}%</span>`
+      : t.status === 'failed' ? `<span class="badge b-err">失败</span>`
+      : `<span class="badge b-ok">已完成</span>`;
+    const abnormal = t.failed + t.duplicated;
+    return `<div class="task">
+      <div class="task-head">
+        <span class="task-name" title="${esc(t.filename)}">${esc(t.filename)}</span>
+        ${stBadge}
+        <span class="task-time">${t.created_at}</span>
+        <div class="task-ops">
+          <button class="btn btn-ghost btn-sm" onclick="showDetail('${t.id}','${esc(t.filename)}')">明细</button>
+          ${abnormal ? `<button class="btn btn-ghost btn-sm" onclick="location.href='/api/tasks/${t.id}/export'">导出异常(${abnormal})</button>` : ''}
+          ${t.failed && !running ? `<button class="btn btn-ghost btn-sm" onclick="retryTask('${t.id}')">重试平台退回</button>` : ''}
+        </div>
+      </div>
+      <div class="progress ${cls}"><div style="width:${pct}%"></div></div>
+      <div class="stats">
+        <span>共 ${t.total} 行</span>
+        <span class="badge b-ok">成功 ${t.success}</span>
+        <span class="badge b-err">失败 ${t.failed}</span>
+        <span class="badge b-dup">重复 ${t.duplicated}</span>
+        <span class="badge b-grey">已处理 ${t.processed}/${t.total}</span>
+      </div>
+      ${t.message ? `<div class="task-msg">${esc(t.message)}</div>` : ''}
+    </div>`;
+  }).join('');
+  // 当前打开的任务仍在处理时，同步刷新明细
+  const cur = list.find(t => t.id === currentTask);
+  if (cur && (cur.status === 'processing' || cur.status === 'pending')) loadRows();
+}
+
+async function retryTask(id){
+  const r = await fetch(`/api/tasks/${id}/retry`, { method:'POST' });
+  const j = await r.json();
+  if (!r.ok) { toast(j.error || '重试失败', false); return; }
+  toast(`已重试 ${j.retrying} 行`);
+  refreshTasks();
+}
+
+/* ---------- 行明细 ---------- */
+const FILTERS = [ ['all','全部'], ['success','成功'], ['failed','失败'], ['duplicate','重复'] ];
+function showDetail(id, name){
+  currentTask = id; filter = 'all'; page = 1;
+  $('#detail').style.display = 'block';
+  $('#detailName').textContent = name;
+  renderTabs(); loadRows();
+  $('#detail').scrollIntoView({ behavior:'smooth' });
+}
+function renderTabs(){
+  $('#tabs').innerHTML = FILTERS.map(([k, label]) =>
+    `<span class="tab ${k===filter?'active':''}" onclick="setFilter('${k}')">${label}</span>`).join('');
+}
+function setFilter(k){ filter = k; page = 1; renderTabs(); loadRows(); }
+async function loadRows(){
+  if (!currentTask) return;
+  const j = await (await fetch(`/api/tasks/${currentTask}/rows?status=${filter}&page=${page}`)).json();
+  pageTotal = Math.max(1, Math.ceil(j.total / j.size));
+  const ST = { success:['成功','b-ok'], failed:['失败','b-err'], duplicate:['重复','b-dup'] };
+  $('#tbody').innerHTML = j.rows.map(r => `
+    <tr class="${r.status === 'duplicate' ? 'dup' : ''}">
+      <td>${r.row_no}</td><td>${esc(r.person_id)}</td><td>${esc(r.item)}</td>
+      <td>${esc(r.result)}</td><td>${esc(r.unit)}</td><td>${esc(r.exam_date)}</td>
+      <td><span class="st badge ${ST[r.status][1]}">${ST[r.status][0]}</span></td>
+      <td class="msg">${esc(r.message)}</td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:#a0a4ab;padding:20px">无数据</td></tr>';
+  $('#pageInfo').textContent = `第 ${j.page}/${pageTotal} 页 · 共 ${j.total} 条`;
+}
+$('#prev').onclick = () => { if (page > 1) { page--; loadRows(); } };
+$('#next').onclick = () => { if (page < pageTotal) { page++; loadRows(); } };
+
+refreshTasks();
+setInterval(refreshTasks, 1500);
+</script>
+</body>
+</html>
