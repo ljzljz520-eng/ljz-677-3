@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>体检结果批量上送平台</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <div class="brand">
+      <span class="brand-mark">＋</span>
+      <div>
+        <h1>体检结果批量上送平台</h1>
+        <p class="brand-sub">导入 Excel · 后端校验 · 逐行上送健康平台 · 异常按行追踪</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="/api/template?sample=true">下载示例数据</a>
+      <a class="btn btn-ghost" href="/api/template">空白模板</a>
+    </div>
+  </div>
+</header>
+
+<main class="container layout">
+  <!-- 左侧：上传 + 任务列表 -->
+  <section class="col-main">
+    <div class="card" id="uploadCard">
+      <h2 class="card-title">1. 选择体检结果 Excel</h2>
+      <div id="dropzone" class="dropzone">
+        <div class="dz-icon">⬆</div>
+        <p class="dz-text">点击选择文件，或将 .xlsx 文件拖拽到此处</p>
+        <p class="dz-hint">列：人员编号、项目、结果、单位、体检日期 · 单次最多 5000 行 · 10MB</p>
+        <input type="file" id="fileInput" accept=".xlsx,.xlsm" hidden>
+      </div>
+      <div id="selectedFile" class="selected-file hidden">
+        <span class="file-icon">📄</span>
+        <span id="selectedName" class="file-name"></span>
+        <button class="link-btn" id="clearFile">重新选择</button>
+      </div>
+      <div class="upload-actions">
+        <button class="btn btn-primary" id="uploadBtn" disabled>上传并校验</button>
+        <span id="uploadMsg" class="inline-msg"></span>
+      </div>
+    </div>
+
+    <!-- 校验结果摘要 -->
+    <div class="card hidden" id="validateCard">
+      <h2 class="card-title">2. 校验结果</h2>
+      <div id="validateStats" class="stat-grid"></div>
+      <div id="validateTip" class="tip"></div>
+      <div class="upload-actions">
+        <button class="btn btn-primary" id="confirmBtn">确认上送有效行</button>
+        <button class="btn btn-ghost" id="viewAfterValidate">查看明细</button>
+        <span id="confirmMsg" class="inline-msg"></span>
+      </div>
+    </div>
+
+    <!-- 任务列表 -->
+    <div class="card">
+      <div class="list-header">
+        <h2 class="card-title">任务列表</h2>
+        <select id="taskFilter" class="select-sm">
+          <option value="">全部状态</option>
+          <option value="validated">待确认</option>
+          <option value="uploading">上送中</option>
+          <option value="completed">已完成</option>
+          <option value="failed">失败</option>
+        </select>
+      </div>
+      <div id="taskList" class="task-list"></div>
+    </div>
+  </section>
+
+  <!-- 右侧：任务明细抽屉式面板（整页切换） -->
+  <section class="col-detail hidden" id="detailPanel">
+    <div class="card detail-card">
+      <button class="link-btn back-btn" id="backBtn">← 返回任务列表</button>
+      <h2 class="card-title" id="detailTitle">任务明细</h2>
+      <div id="detailMeta" class="detail-meta"></div>
+      <div id="progressWrap" class="progress-wrap hidden">
+        <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+        <span id="progressText" class="progress-text"></span>
+      </div>
+      <div id="errorSummary" class="error-summary hidden"></div>
+      <div class="detail-toolbar">
+        <div id="rowFilters" class="chip-row"></div>
+        <div class="toolbar-right">
+          <input type="search" id="rowSearch" class="input-sm" placeholder="搜索人员编号 / 项目">
+          <button class="btn btn-outline btn-sm" id="exportBtn">导出异常 Excel</button>
+          <button class="btn btn-primary btn-sm hidden" id="detailConfirmBtn">确认上送</button>
+          <button class="btn btn-outline btn-sm hidden" id="retryBtn">重试可重试行</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>行号</th><th>人员编号</th><th>项目</th><th>结果</th><th>单位</th>
+              <th>体检日期</th><th>状态</th><th>问题说明 / 平台返回</th>
+            </tr>
+          </thead>
+          <tbody id="rowTbody"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <button class="btn btn-outline btn-sm" id="prevPage">上一页</button>
+        <span id="pageInfo" class="page-info"></span>
+        <button class="btn btn-outline btn-sm" id="nextPage">下一页</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 项目目录弹窗 -->
+<div id="itemsModal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>体检项目目录与标准单位</h3>
+      <button class="link-btn" id="closeItems">关闭</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>代码</th><th>名称</th><th>标准单位</th><th>参考区间</th></tr></thead>
+        <tbody id="itemsTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>
